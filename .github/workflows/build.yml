@@ -45,7 +45,7 @@ jobs:
           fi
 
           DATE=$(date "+%Y/%m/%d")
-          elif [ "$LATEST_RENEW" == '1' ]; then
+          if [ "$LATEST_RENEW" == '1' ]; then
             COMMIT="Build to $LATEST_NEW by Github Actions, $DATE"
             echo "commit=$COMMIT" >> $GITHUB_OUTPUT
           fi
