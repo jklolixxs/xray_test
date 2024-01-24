@@ -16,6 +16,7 @@ jobs:
     name: "Check version & Delete release"
     outputs:
       latest_now: ${{ steps.get-version.outputs.latest_now }}
+      latest_new: ${{ steps.get-version.outputs.latest_new }}
       latest_renew: ${{ steps.get-version.outputs.latest_renew }}
       commit: ${{ steps.get-version.outputs.commit }}
     steps:
@@ -55,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     name: "Create release"
     env:
-      LATEST_VERSION: ${{ needs.Check-version.outputs.latest_new }}
+      LATEST_NEW: ${{ needs.Check-version.outputs.latest_new }}
       LATEST_RENEW: ${{ needs.Check-version.outputs.latest_renew }}
     steps:
       - name: Checkout code
@@ -69,8 +70,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.LATEST_VERSION }}
-          release_name: ${{ env.LATEST_VERSION }}
+          tag_name: ${{ env.LATEST_NEW }}
+          release_name: ${{ env.LATEST_NEW }}
           draft: false
           prerelease: false
           overwrite: true
@@ -83,40 +84,40 @@ jobs:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}
-      VERSION: ${{ needs.Check-version.outputs.latest_new }}
+      LATEST_NEW: ${{ needs.Check-version.outputs.latest_new }}
 
     steps:
       - name: Checkout code
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
 
       - name: Set up QEMU
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: docker/setup-qemu-action@v3.0.0
 
       - name: Set up Docker Buildx
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: docker/setup-buildx-action@v3.0.0
 
       - name: Login to DockerHub
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: docker/login-action@v3.0.0
         with:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
       - name: Push images to Docker hub
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: docker/build-push-action@v5.1.0
         with:
           push: true
           platforms: linux/i386, linux/amd64, linux/arm/v7, linux/arm64
-          build-args: BRANCH=${{ env.VERSION }}
+          build-args: BRANCH=${{ env.LATEST_NEW }}
           tags: |
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
-            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.LATEST_NEW }}
   # =============================================================================================================================================================================================
   Build-latest-releases:
     needs: Check-version
@@ -125,7 +126,7 @@ jobs:
     env:
       CGO_ENABLED: 0
       BINARY: xray
-      VERSION: ${{ needs.Check-version.outputs.latest_new }}
+      LATEST_NEW: ${{ needs.Check-version.outputs.latest_new }}
 
     strategy:
       matrix:
@@ -147,21 +148,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
 
       - name: Git clone repository
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: actions/checkout@v4
         with:
           repository: "XTLS/Xray-core"
-          ref: "${{ env.VERSION }}"
+          ref: "${{ env.LATEST_NEW }}"
           fetch-depth: 1
 
       - name: Build main-next releases
-        if: ${{ env.VERSION != '' }}
+        if: ${{ env.LATEST_NEW != '' }}
         uses: fscarmen/go-release-action@v1.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} # 你的 GITHUB_TOKEN 用于将版本上传到 Github Release。
@@ -173,8 +174,8 @@ jobs:
           build_flags: "-trimpath" # 传递给 go build 命令的其他参数
           ldflags: -s -w -buildid= --extldflags '-static -fpic' # ldflags参数
           md5sum: "false"
-          release_tag: "${{ env.VERSION }}" # 上传的标签
-          release_name: "${{ env.VERSION }}" # 上传的名字
+          release_tag: "${{ env.LATEST_NEW }}" # 上传的标签
+          release_name: "${{ env.LATEST_NEW }}" # 上传的名字
           compress_assets: "auto" # 自定义打包
           overwrite: true # 覆盖
           asset_name: "${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}" # 自定义名称
