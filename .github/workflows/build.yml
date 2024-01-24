@@ -19,6 +19,7 @@ jobs:
       latest_new: ${{ steps.get-version.outputs.latest_new }}
       latest_renew: ${{ steps.get-version.outputs.latest_renew }}
       commit: ${{ steps.get-version.outputs.commit }}
+      go_version: ${{ steps.get-version.outputs.go_version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
@@ -31,6 +32,7 @@ jobs:
           LATEST_NOW=$(awk '/latest/{print $NF; exit}' README.md)
 
           LATEST_NEW=$(curl -s 'https://api.github.com/repos/XTLS/Xray-core/releases' | jq -r '.[0].tag_name')
+          GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
 
           echo "LATEST_NOW: $LATEST_NOW"
           echo "LATEST_NEW: $LATEST_NEW"
@@ -43,6 +45,7 @@ jobs:
             echo "latest_now=$LATEST_NOW" >> $GITHUB_OUTPUT
             echo "latest_new=$LATEST_NEW" >> $GITHUB_OUTPUT
             echo "latest_renew=$LATEST_RENEW" >> $GITHUB_OUTPUT
+            echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
           fi
 
           DATE=$(date "+%Y/%m/%d")
@@ -127,6 +130,7 @@ jobs:
       CGO_ENABLED: 0
       BINARY: xray
       LATEST_NEW: ${{ needs.Check-version.outputs.latest_new }}
+      GO_VERSION: ${{ needs.Check-version.outputs.go_version }}
 
     strategy:
       matrix:
@@ -161,18 +165,18 @@ jobs:
           ref: "${{ env.LATEST_NEW }}"
           fetch-depth: 1
 
-      - name: Build main-next releases
+      - name: Build latest releases
         if: ${{ env.LATEST_NEW != '' }}
         uses: fscarmen/go-release-action@v1.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} # 你的 GITHUB_TOKEN 用于将版本上传到 Github Release。
           goos: ${{ matrix.goos }} # 运行程序的操作系统
           goarch: ${{ matrix.goarch }} # 运行程序的架构
-          goversion: ${{ env.GOVERSION }} # Go 编译环境版本
+          goversion: ${{ env.GO_VERSION }} # Go 编译环境版本
           project_path: "./cmd/xray" # 在哪里运行 go build 命令。
           binary_name: "${{ env.BINARY }}" # 二进制名称
           build_flags: "-trimpath" # 传递给 go build 命令的其他参数
-          ldflags: -s -w -buildid= --extldflags '-static -fpic' # ldflags参数
+          ldflags: -s -w --extldflags '-static -fpic' # ldflags参数
           md5sum: "false"
           release_tag: "${{ env.LATEST_NEW }}" # 上传的标签
           release_name: "${{ env.LATEST_NEW }}" # 上传的名字
